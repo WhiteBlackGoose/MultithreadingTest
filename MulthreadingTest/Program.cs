@@ -2,9 +2,11 @@
 using System.Diagnostics;
 
 int THREAD_COUNT = int.Parse(args[0]);
-int TIME_PER_TEST_MS = 10_000;
+// int TIME_PER_TEST_MS = 10_000;
 
 var stats = new Stats();
+// Console.WriteLine(Job(stats, 2));
+// return;
 for (int i = 0; i <= THREAD_COUNT; i++)
 {
     if (i == THREAD_COUNT)
@@ -47,18 +49,27 @@ void Print(Stats stats)
     }
 }
 
-static void Job(Stats stats, int jobId)
+static float Job(Stats stats, int jobId)
 {
-    var a = 1L; 
-    var b = 1L;
-    var i = 0L;
+    var g = (float)jobId + 0.1F;
+    const float C = 1.00001F;
+    const int ITER_COUNT = 10000;
     while (true)
     {
-        (b, a) = (a + b, b);
-        i++;
-        if (i % 1000 == 0)
-            stats.Iters[jobId] = i;
+        for (int i = 0; i < ITER_COUNT; i++)
+        {
+            g *= C;g *= C; g *= C; g *= C; 
+            g *= C;g *= C; g *= C; g *= C; 
+            g *= C;g *= C; g *= C; g *= C; 
+            g *= C;g *= C; g *= C; g *= C; 
+            g *= C;g *= C; g *= C; g *= C; 
+            g *= C;g *= C; g *= C; g *= C; 
+        }
+        while (g > 1000F)
+            g /= 1000F;
+        stats.Iters[jobId] = stats.Iters[jobId] + ITER_COUNT * 24;
     }
+    return g;
 }
 
 class Stats
