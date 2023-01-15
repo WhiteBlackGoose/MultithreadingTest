@@ -2,6 +2,7 @@
 using System.Diagnostics;
 
 int THREAD_COUNT = int.Parse(args[0]);
+int TIME_PER_TEST_MS = 10_000;
 
 var stats = new Stats();
 for (int i = 0; i <= THREAD_COUNT; i++)
@@ -41,7 +42,7 @@ void Print(Stats stats)
     static void PrintPerf(long iter, Stopwatch sw)
     {
         var perf = iter * 1000 / sw.ElapsedMilliseconds;
-        Console.Write((double)(perf) / 1_000_000);
+        Console.Write(perf / 1_000_000);
         Console.WriteLine(" MFLOPS");
     }
 }
@@ -63,4 +64,5 @@ static void Job(Stats stats, int jobId)
 class Stats
 {
     public long[] Iters { get; } = new long[32];
+    public long TotalPerf { set; get; } = 0;
 }
