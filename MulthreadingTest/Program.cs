@@ -1,42 +1,36 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using System.Diagnostics;
 
-int THREAD_COUNT = int.Parse(args[0]);
+RunTests(1, 2, 3, 4, 6, 8, 10, 12, 16, 20, 24);
 // int TIME_PER_TEST_MS = 10_000;
 
-void RunTests(int[] threadCount)
+void RunTests(params int[] threadCount)
 {
+    var table = new Table("Thread Count", "Time elapsed", "Total perf", "Perf per thread");
     foreach (var tc in threadCount)
     {
-        Console.WriteLine($"Running test: thread Count: {tc}");
+        table.Print(tc);
         var (time, counts) = RunTest(tc);
-        Console.WriteLine($"Time: {time}");
+        table.Print(time, counts, counts * 1000 / time);
     }
 }
 
 (long EllapsedAverage, long TotalCount) RunTest(int threadCount)
 {
     var stats = new Stats(threadCount);
-    for (int i = 0; i <= threadCount; i++)
+    for (int i = 0; i < threadCount; i++)
     {
-        if (i == threadCount)
-             new Thread(() => Watch(stats)).Start();
-        else
-        {
-            var jobId = i;
-            new Thread(() => Job(stats, jobId)).Start();
-        }
+        var jobId = i;
+        new Thread(() => Job(stats, jobId)).Start();
     }
     Thread.Sleep(1000);
-    return (stats.EllapsedTime.Sum() / threadCount, stats.TotalPerf);
+    stats.CancelRequested = true;
+    while (stats.Cancelled.Any(c => c))
+        Thread.Sleep(100);
+    return (stats.EllapsedTime.Sum() / threadCount, stats.Iters.Sum());
 }
 
 Console.WriteLine("Done");
-
-void Watch(Stats stats)
-{
-    Thread.Sleep(10000);
-}
 
 static float Job(Stats stats, int jobId)
 {
@@ -56,12 +50,13 @@ static float Job(Stats stats, int jobId)
             g *= C;g *= C; g *= C; g *= C; 
         }
         while (g > 1000F)
-            g /= 1000F;
-        if (stats.Cancelled)
+            g /= 2F;
+        if (stats.CancelRequested)
             break;
         stats.Iters[jobId] = stats.Iters[jobId] + ITER_COUNT * 24;
     }
     stats.EllapsedTime[jobId] = sw.ElapsedMilliseconds;
+    stats.Cancelled[jobId] = true;
     return g;
 }
 
@@ -69,13 +64,13 @@ class Stats
 {
     public long[] Iters { get; }
     public long[] EllapsedTime { get; }
-    public long TotalPerf { set; get; }
-    public bool Cancelled { get; set; }
+    public bool CancelRequested { get; set; }
+    public bool[] Cancelled { get; set; }
     public Stats(int cores)
     {
         Iters = new long[cores];
-        TotalPerf = 0;
-        Cancelled = false;
+        CancelRequested = false;
+        Cancelled = new bool[cores];
         EllapsedTime = new long[cores];
     }
 }
@@ -90,16 +85,16 @@ class Table
             currentCol = 0;
         return currentCol++;
     }
-    public Table(params string[] columns)
+    public Table(params object[] columns)
     {
-        lengths = columns.Select(c => c.Length).ToArray();
+        lengths = columns.Select(c => c.ToString()!.Length).ToArray();
         currentCol = 0;
         Print(columns);
     }
-    public void Print(params string[] args)
+    public void Print(params object[] args)
     {
         foreach (var arg in args)
-            PrintOne(arg);
+            PrintOne(arg.ToString()!);
         void PrintOne(string s)
         {
             var colId = PopNext();
