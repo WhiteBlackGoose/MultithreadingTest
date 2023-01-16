@@ -1,17 +1,19 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using System.Diagnostics;
 
-RunTests(1, 2, 3, 4, 6, 8, 10, 12, 16, 20, 24);
+RunTests(1, 2, 3, 4, 6, 8, 10, 12, 16, 20, 24, 28, 32);
 // int TIME_PER_TEST_MS = 10_000;
 
 void RunTests(params int[] threadCount)
 {
-    var table = new Table("Thread Count", "Time elapsed", "Total perf", "Perf per thread");
+    var table = new Table("Thread Count", "Time elapsed", "Perf MFLOPS", "Perf per thread MFLOPS");
     foreach (var tc in threadCount)
     {
         table.Print(tc);
         var (time, counts) = RunTest(tc);
-        table.Print(time, counts, counts * 1000 / time);
+        var countsDec = (decimal)(counts * 1_000 / time / 100_000) / 10m;
+        var countsDecThread = (decimal)(counts * 1_000 / time / 100_000 / tc) / 10m;
+        table.Print(time, countsDec, countsDecThread);
     }
 }
 
@@ -23,9 +25,9 @@ void RunTests(params int[] threadCount)
         var jobId = i;
         new Thread(() => Job(stats, jobId)).Start();
     }
-    Thread.Sleep(1000);
+    Thread.Sleep(2500);
     stats.CancelRequested = true;
-    while (stats.Cancelled.Any(c => c))
+    while (!stats.Cancelled.All(c => c))
         Thread.Sleep(100);
     return (stats.EllapsedTime.Sum() / threadCount, stats.Iters.Sum());
 }
@@ -102,7 +104,7 @@ class Table
                 Console.Write("| ");
             Console.Write(s);
             Console.Write(new string(' ', lengths[colId] - s.Length));
-            Console.Write(" |");
+            Console.Write(" | ");
             if (colId == lengths.Length - 1)
                 Console.WriteLine();
         }
